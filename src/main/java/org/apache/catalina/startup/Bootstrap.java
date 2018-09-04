@@ -11,6 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import org.apache.catalina.security.SecurityClassLoad;
+import org.apache.catalina.startup.ClassLoaderFactory.Repository;
+import org.apache.catalina.startup.ClassLoaderFactory.RepositoryType;
+
 /**
  * Created by tianye on 2018/9/4.
  */
@@ -395,13 +399,26 @@ public class Bootstrap {
 
     }
 
+    private void setCatalinaBase() {
 
-    public void setCatalinaHome(String s) {
-        System.setProperty(Globals.CATALINA_HOME_PROP, s);
+        if (System.getProperty(Globals.CATALINA_BASE_PROP) != null)
+            return;
+        if (System.getProperty(Globals.CATALINA_HOME_PROP) != null)
+            System.setProperty(Globals.CATALINA_BASE_PROP,
+                    System.getProperty(Globals.CATALINA_HOME_PROP));
+        else
+            System.setProperty(Globals.CATALINA_BASE_PROP,
+                    System.getProperty("user.dir"));
+
     }
 
-    public void setCatalinaBase(String s) {
-        System.setProperty(Globals.CATALINA_BASE_PROP, s);
+    public static String getCatalinaHome() {
+        return System.getProperty(Globals.CATALINA_HOME_PROP,
+                System.getProperty("user.dir"));
+    }
+
+    public static String getCatalinaBase() {
+        return System.getProperty(Globals.CATALINA_BASE_PROP, getCatalinaHome());
     }
 
 
