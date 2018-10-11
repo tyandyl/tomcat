@@ -62,6 +62,7 @@ public class CatalinaProperties {
         Throwable error = null;
 
         try {
+            //找java环境变量中，是否设置catalina.config
             String configUrl = getConfigUrl();
             if (configUrl != null) {
                 is = (new URL(configUrl)).openStream();
@@ -69,11 +70,16 @@ public class CatalinaProperties {
         } catch (Throwable t) {
             handleThrowable(t);
         }
-
+        //一般都是没有设置的，所以我们代码走这里
+        //Tomcat的catalina.properties文件位于%CATALINA_HOME%/conf/目录下面，
+        // 该文件主要配置tomcat的安全设置、类加载设置、不需要扫描的类设置、字符缓存设置四大块。
         if (is == null) {
             try {
+                //获取安装目录
                 File home = new File(getCatalinaBase());
+                //找安装目录下的conf文件
                 File conf = new File(home, "conf");
+                //找conf文件下的catalina.properties
                 File propsFile = new File(conf, "catalina.properties");
                 is = new FileInputStream(propsFile);
             } catch (Throwable t) {

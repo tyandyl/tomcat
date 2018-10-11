@@ -113,15 +113,36 @@ public class Bootstrap {
             throws Exception
     {
 
-        // Set Catalina path
+        //构建tomcat安装目录，CATALINA_HOME是Tomcat的安装目录，
+        // CATALINA_BASE是Tomcat的工作目录。如果我们想要运行Tomcat的 多个实例，
+        // 但是不想安装多个Tomcat软件副本。那么我们可以配置多个工作 目录，
+        // 每个运行实例独占一个工作目录，但是共享同一个安装目录。
+        // Tomcat每个运行实例需要使用自己的conf、logs、temp、webapps、work和shared目录，
+        // 因此CATALINA_BASE就 指向这些目录。 而其他目录主要包括了Tomcat的二进制文件和脚本，
+        // CATALINA_HOME就指向这些目录。如果我们希望再运行另一个Tomcat实例，那么我们可以建立一个目录，
+        // 把conf、logs、temp、webapps、work和shared拷贝 到该目录下，然后让CATALINA_BASE指向该目录即可
         setCatalinaHome();
         setCatalinaBase();
 
-//        初始化 classLoader
+       //初始化 classLoader
         initClassLoaders();
 
+        //这里我们将当前加载器设置成tomcat服务器专用的加载器
         Thread.currentThread().setContextClassLoader(catalinaLoader);
 
+        //SecurityClassLoad.securityClassLoad(catalinaLoader)的作用就是线程安全的加载class
+        /**
+         * securityClassLoad方法主要负责加载Tomcat容器所需的class，包括：
+
+         Tomcat核心class，即org.apache.catalina.core路径下的class；
+         org.apache.catalina.loader.WebappClassLoader$PrivilegedFindResourceByName；
+         Tomcat有关session的class，即org.apache.catalina.session路径下的class；
+         Tomcat工具类的class，即org.apache.catalina.util路径下的class；
+         javax.servlet.http.Cookie；
+         Tomcat处理请求的class，即org.apache.catalina.connector路径下的class；
+         Tomcat其它工具类的class，也是org.apache.catalina.util路径下的class；
+
+         */
         SecurityClassLoad.securityClassLoad(catalinaLoader);
 
 
@@ -150,12 +171,16 @@ public class Bootstrap {
 
     private void initClassLoaders() {
         try {
+            //首先创建commonLoader，这个加载器是tomcat服务器专用的类和appweb专用的类都可以加载
+            //第一次加载的时候，在java环境中找common.loader 是没有的，所以，返回null
             commonLoader = createClassLoader("common", null);
             if( commonLoader == null ) {
-                // no config file, default to this loader - we might be in a 'single' env.
+                //因为返回null，所以使用当前类的加载器
                 commonLoader=this.getClass().getClassLoader();
             }
+            //第一次加载的时候，在java环境中找server.loader 是没有的，所以，这里使用commonLoader加载器
             catalinaLoader = createClassLoader("server", commonLoader);
+            //第一次加载的时候，在java环境中找shared.loader 是没有的，所以，这里使用commonLoader加载器
             sharedLoader = createClassLoader("shared", commonLoader);
         } catch (Throwable t) {
             handleThrowable(t);
@@ -166,6 +191,21 @@ public class Bootstrap {
     private ClassLoader createClassLoader(String name, ClassLoader parent)
             throws Exception {
 
+        //查询%CATALINA_HOME%/conf/catalina.properties 中的common.loader和server.loader和shared.loader
+        /**
+         * common.loader 的value为：（
+           1）${catalina.base}/lib主要在下面这些路径中加载：
+         （2）${catalina.base}/lib/*.jar
+         （3）${catalina.home}/lib
+         （4）${catalina.home}/lib/*.jar
+         在common.loader 加载完后，tomcat启动程序会检查 catalina.properties文件中配置的server.loader和shared.loader是否设置。
+         如果设置，读取 tomcat下对应的server和shared这两个目录的类库。
+         server和shared是对应tomcat目录下的两个目录，在Tomcat7中默认这两个目录是没有的。设置方法如下
+         server.loader=${catalina.base}/server/classes,${catalina.base}/server/lib/*.jar
+         shared.loader=${catalina.base}/server/classes,${catalina.base}/server/lib/*.jar
+         Tomcat可以通过catalina.properties的server和shared设置，为webapp提供公用类库。
+         使一些公用的、不需要与webapp放在一起的设置信息单独保存，在更新webapp的war的时候无需更改webapp的设置。
+         */
         String value = CatalinaProperties.getProperty(name + ".loader");
         if ((value == null) || (value.equals("")))
             return parent;
@@ -175,6 +215,12 @@ public class Bootstrap {
         List<Repository> repositories = new ArrayList<Repository>();
 
         StringTokenizer tokenizer = new StringTokenizer(value, ",");
+        /*
+        	 * G:\work eclipse workspace\tomcat8/lib
+				G:\work eclipse workspace\tomcat8/lib/*.jar
+				G:\work eclipse workspace\tomcat8/lib
+				G:\work eclipse workspace\tomcat8/lib/*.jar
+        	 */
         while (tokenizer.hasMoreElements()) {
             String repository = tokenizer.nextToken().trim();
             if (repository.length() == 0) {
@@ -183,6 +229,7 @@ public class Bootstrap {
 
             // Check for a JAR URL repository
             try {
+                //我觉得这个url的意思就是，如果成功，那就是url,可以用
                 @SuppressWarnings("unused")
                 URL url = new URL(repository);
                 repositories.add(

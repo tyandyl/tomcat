@@ -175,6 +175,7 @@ public class ClassLoaderFactory {
 
                     public URLClassLoader run() {
                         if (parent == null)
+                            //Java使用URLClassLoader加载指定位置的类
                             return new URLClassLoader(array);
                         else
                             return new URLClassLoader(array, parent);
