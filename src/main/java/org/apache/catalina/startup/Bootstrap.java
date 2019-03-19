@@ -195,8 +195,8 @@ public class Bootstrap {
         /**
          * common.loader 的value为：（
            1）${catalina.base}/lib主要在下面这些路径中加载：
-         （2）${catalina.base}/lib/*.jar
-         （3）${catalina.home}/lib
+         （2）${catalina.base}/lib/*.jar   --base路径
+         （3）${catalina.home}/lib    --home路径
          （4）${catalina.home}/lib/*.jar
          在common.loader 加载完后，tomcat启动程序会检查 catalina.properties文件中配置的server.loader和shared.loader是否设置。
          如果设置，读取 tomcat下对应的server和shared这两个目录的类库。
